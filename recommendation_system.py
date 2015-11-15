@@ -102,11 +102,11 @@ def build_user_rating_table(user_indexed_reviews):
     user_rating_table = dict()
     for user, restaurant_reviews in user_indexed_reviews.items():
         user_rating_table[user] = dict()
-        for restaurant, reivews in restaurant_reviews.items():
+        for restaurant, reviews in restaurant_reviews.items():
             user_rating_table[user][restaurant] = cal_average_rating(reviews)
     return user_rating_table
 
-def cal_evaluations(test_user_data, similarities, user_rating_table):
+def CF_evaluating(test_user_data, similarities, user_rating_table):
     """
     calculate evaluations using collaborative filtering
     test_user_data -- {user : {restaurant : [reviews]}}
@@ -123,7 +123,7 @@ def cal_evaluations(test_user_data, similarities, user_rating_table):
             evaluations[user][restaurant] = (true_rating, prediction)
     return evaluations
 
-def random_evaluations(test_user_data):
+def random_evaluating(test_user_data):
     """
     calculate evaluations using random prediction
     test_user_data -- {user : {restaurant : [reviews]}}
@@ -160,16 +160,24 @@ def cal_CF_similarity(item_table):
     """
     similarities = dict()
     list_of_items = sorted(item_table.keys())
+    countnonezero, countzero = 0, 0
     for i, item_i in enumerate(list_of_items[:-1]):
+        print "    calcuating:", i
         for j in range(i+1, len(list_of_items)):
-            product, sum_square1, sum_square2 = 0, 0, 0
             item_j = list_of_items[j]
+            product, sum_square1, sum_square2 = 0.0, 0.0, 0.0
             for user in item_table[item_i].keys():
                 if user in item_table[item_j].keys():
                     product += item_table[item_i][user] * item_table[item_j][user]
-                    sum_square1 += item_table[item_i]**2
-                    sum_square2 += item_table[item_j]**2
-            similarity[(item_i, item_j)] = product/math.sqrt(sum_square1 * sum_square2)
+                    sum_square1 += item_table[item_i][user]**2
+                    sum_square2 += item_table[item_j][user]**2
+            if sum_square1 == 0 or sum_square2 == 0:
+                countzero += 1
+                similarities[(item_i, item_j)] = 0
+            else:
+                countnonezero += 1
+                similarities[(item_i, item_j)] = product/math.sqrt(sum_square1 * sum_square2)
+    print "zero items in similarities:", countzero, "none-zero items in similarities:", countnonezero
     return similarities
 
 def CF_prediction(similarities, user_rating_table, item_to_predict):
@@ -235,31 +243,30 @@ def main(argv):
     print "setting data for test purposes..."
     test_user_set = get_test_users(user_indexed_reviews, review_minimum_num)
     test_user_data = get_tests_and_update_reviews(user_indexed_reviews, restaurant_indexed_reviews, test_user_set, test_percentage)
-    
-    print "calculating CF similarities..."
+
     restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews)
-    similarities = cal_CF_similarity(restaurant_user_table)
-
-    print "predicting..."
     user_rating_table = build_user_rating_table(user_indexed_reviews)
-    CF_evaluations = cal_evaluations(test_user_data, similarities, user_rating_table)
-    random_evaluations = random_evaluations(test_user_data)
 
-    print "calculating rmse..."
-    rmses = cal_rmse(CF_evaluations)
-    total_rmse = 0
-    for user, rmse in rmses:
-        total_rmse += rmse
-    print "final total CF rmse for the test data is:", total_rmse
+    # CF evaluation
+#     print "calculating CF evaluations..."
+#     similarities = cal_CF_similarity(restaurant_user_table)
+#     CF_evaluations = CF_evaluating(test_user_data, similarities, user_rating_table)
+#     CF_rmses = cal_rmse(CF_evaluations)
+#     CF_total_rmse = 0
+#     for user, rmse in CF_rmses:
+#         CF_total_rmse += rmse
+#     print "final total CF rmse for the test data is:", total_rmse
 
-    random.seed()
+    # random evaluation
     print "calculating random rmse..."
+    random.seed()
+    random_evaluations = random_evaluating(test_user_data)
     random_rmses = cal_rmse(random_evaluations)
     random_total_rmse = 0
     for user, rmse in random_rmses:
-        total_rmse += rmse
+        random_total_rmse += rmse
     print "final total CF rmse for the test data is:", random_total_rmse
-    
+
 
 if __name__ == '__main__':
     main(sys.argv)

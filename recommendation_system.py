@@ -3,6 +3,7 @@ import sys
 import random
 import math
 import yelp_data_preprocessing
+import svd
 #import pickle
 
 
@@ -65,7 +66,7 @@ def get_tests_and_update_reviews(user_indexed_reviews, restaurant_indexed_review
     test_user_data = dict()
     for test_user in test_user_set:
         test_user_data[test_user] = dict()
-        total_review_num = len(user_indexed_reviews)
+        total_review_num = len(user_indexed_reviews[test_user])
         test_review_num = int(total_review_num * test_percentage)
         for i, (restaurant, reviews) in enumerate(user_indexed_reviews[test_user].items()):
             if len(restaurant_indexed_reviews[restaurant]) == 1: # restaurant only has one review, don't delete it
@@ -246,11 +247,24 @@ def test_searchRestaurantsOnDistance():
         searchRestaurantsOnDistance(location, restaurants, 10)
         print ' '
 
+def svd_evaluating(test_user_data, user_rating_table):
+    """
+    calculate evaluations using svd
+    test_user_data -- {user : {restaurant : [reviews]}}
+    user_rating_table --{user : {restaurant : rating}}
+    return evaluations -- {user : {restaurant : (true_rating, prediction)}}
+    """
+    # svd
+    svd_model = svd.SVD(len(all_users), len(all_restaurants), user_rating_table)
+    svd_model.svd_training(user_rating_table, test_user_data, 30)
+    evaluations = svd_model.svd_test(test_user_data)
+    return evaluations
+
 def main(argv):
     # set necessary parameters
     review_minimum_num = 50
-    test_percentage = 0.3 # percentage of test data in all data set
-    training_percentage = 0.5 # percentage of actual training set in all training data 
+    test_percentage = 0.1 # percentage of test data in all data set
+    training_percentage = 1 # percentage of actual training set in all training data 
 
     # load data
 #     print "loading all reivews..."
@@ -276,11 +290,11 @@ def main(argv):
     user_rating_table = build_user_rating_table(user_indexed_reviews)
 
     # CF evaluation
-    print "calculating CF evaluations..."
+    #print "calculating CF evaluations..."
 ##     //similarities = cal_CF_similarity(restaurant_user_table)
-    CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
-    CF_rmse = cal_rmse(CF_evaluations)
-    print "final total CF rmse for the test data is:", CF_rmse
+    #CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
+    #CF_rmse = cal_rmse(CF_evaluations)
+    #print "final total CF rmse for the test data is:", CF_rmse
 
     # random evaluation
 #    print "calculating random rmse..."
@@ -288,6 +302,13 @@ def main(argv):
 #    random_evaluations = random_evaluating(test_user_data)
 #    random_rmse = cal_rmse(random_evaluations)
 #    print "final total CF rmse for the test data is:", random_rmse
+
+    # SVD evaluation
+    print "calculating SVD evaluations..."
+##     //similarities = cal_CF_similarity(restaurant_user_table)
+    SVD_evaluations = svd_evaluating(test_user_data, user_rating_table)
+    SVD_rmse = cal_rmse(SVD_evaluations)
+    print "final total SVD rmse for the test data is:", SVD_rmse
 
 
 if __name__ == '__main__':

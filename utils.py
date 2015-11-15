@@ -65,3 +65,35 @@ def get_subdictionary(dictionary, percent):
             break
     return subdictionary
 
+def innerProduct(v1, v2):
+    """
+    compute inner product for two vectors
+    """
+    innerP = 0.0
+    for i in range(len(v1)):
+        innerP += v1[i] * v2[i]
+    return innerP
+
+def cal_average_rating(reviews): 
+    """
+    calculate the rating from reviews, if a user has multiple reviews for a restaurant, use the average rating
+    """
+    rating, count = 0.0, 0
+    for review in reviews:
+        rating += review["stars"]
+        count += 1
+    rating /= count
+    return rating 
+
+def cal_rmse(evaluation_table):
+    """
+    give an evaluation_table {test_user_id : {restaurant : (true_rating, prediction)}}, 
+    return final rmse
+    """
+    err, n = 0, 0
+    for user, evaluations in evaluation_table.items():
+        for restaurant, (true_rating, prediction) in evaluations.items():
+            err += (true_rating-prediction)**2
+            n += 1
+    return math.sqrt(err/n)
+

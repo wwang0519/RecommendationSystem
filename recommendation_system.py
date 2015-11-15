@@ -106,22 +106,88 @@ def build_user_rating_table(user_indexed_reviews):
             user_rating_table[user][restaurant] = cal_average_rating(reviews)
     return user_rating_table
 
-def CF_evaluating(test_user_data, similarities, user_rating_table):
+def CF_evaluating(test_user_data, user_rating_table, item_table):
     """
     calculate evaluations using collaborative filtering
     test_user_data -- {user : {restaurant : [reviews]}}
-    similarities -- {(restaurant_i, restaurant_j) : similarity}
     user_rating_table --{user : {restaurant : rating}}
+    item_table -- {item : {user : rating - average}}
     return evaluations -- {user : {restaurant : (true_rating, prediction)}}
     """
     evaluations = dict() 
+    count = 1
+#    print "total number of users to evaluate:", len(test_user_data)
     for user in test_user_data.keys():
+#        print "    ", count
+        count += 1
+        count_item = 1
         evaluations[user] = dict()
         for restaurant, reviews in test_user_data[user].items():
+#            print "    count item:", count_item
+            count_item += 1
             true_rating = cal_average_rating(reviews)
-            prediction = CF_prediction(similarities, user_rating_table, restaurant)
+            prediction = CF_prediction(user_rating_table[user], item_table, restaurant, user)
             evaluations[user][restaurant] = (true_rating, prediction)
     return evaluations
+
+def CF_prediction(item_rating_table, item_table, item_to_predict, user):
+    """
+    item_rating_table {item : rating}} 
+    item_table -- {item : {user : rating - average}} 
+    with item in table all being items rated by the user, 
+    return a predicated rating for item of the user
+    """
+    if item_to_predict in item_rating_table:
+        print "The user has rating for this item, don't need predication, return rating"
+        return item_rating_table[item_to_predict]
+    numerator, denominator = 0.0, 0.0
+    for item in item_rating_table:
+#        key = sort([item_to_predict, item])
+        similarity = cal_CF_similarity(item_to_predict, item, item_table)
+        numerator += similarity * item_rating_table[item]
+        denominator += similarity
+    if denominator == 0: 
+        prediction = all_users[(user,)][0]["average_stars"]
+    else:
+        prediction = numerator/denominator
+    return prediction
+
+def cal_CF_similarity(item_i, item_j, item_table):
+    """
+    give a dictionary item_table {item : {user : rating - average}}, 
+    return the CF similarity of item_i, item_j
+    """
+    product, sum_square1, sum_square2 = 0.0, 0.0, 0.0
+    for user in item_table[item_i].keys():
+        if user in item_table[item_j].keys():
+            product += item_table[item_i][user] * item_table[item_j][user]
+            sum_square1 += item_table[item_i][user]**2
+            sum_square2 += item_table[item_j][user]**2
+        if sum_square1 == 0 or sum_square2 == 0:
+            return 0
+        else:
+            return product/math.sqrt(sum_square1 * sum_square2)
+                
+def cal_CF_similarity_table(item_table):
+    """
+    give a dictionary item_table {item : {user : rating - average}}, 
+    return a dictionary {(item_i, item_j): similarity between i,j}, restaurant_i and restaurant_j are sorted in ascending order
+    """
+    similarities = dict()
+    list_of_items = sorted(item_table.keys())
+    countnonezero, countzero = 0, 0
+    for i, item_i in enumerate(list_of_items[:-1]):
+        print "    calcuating:", i
+        for j in range(i+1, len(list_of_items)):
+            item_j = list_of_items[j]
+            similarity = cal_CF_similarity(item_i, item_j, item_table)
+            if similarity == 0:
+                countzero += 1
+            else:
+                countnonezero += 1
+            similarities[(item_i, item_j)] = similarity
+    print "zero items in similarities:", countzero, "none-zero items in similarities:", countnonezero
+    return similarities
 
 def random_evaluating(test_user_data):
     """
@@ -134,66 +200,21 @@ def random_evaluating(test_user_data):
         evaluations[user] = dict()
         for restaurant, reviews in test_user_data[user].items():
             true_rating = cal_average_rating(reviews)
-            prediction = random.randint(2, 10) * 0.5
+            prediction = random.randint(1, 10) * 0.5
             evaluations[user][restaurant] = (true_rating, prediction)
     return evaluations
 
 def cal_rmse(evaluation_table):
     """
     give an evaluation_table {test_user_id : {restaurant : (true_rating, prediction)}}, 
-    return a list of pairs -- [(user_id, rmse)]
+    return final rmse
     """
-    rmses = [] # (use_id, rmse)
+    err, n = 0, 0
     for user, evaluations in evaluation_table.items():
-        err = 0
-        n = len(evaluation)
         for restaurant, (true_rating, prediction) in evaluations.items():
             err += (true_rating-prediction)**2
-        rmse = math.sqrt(err/n)
-        rmses.append((user, rmse))
-    return rmses
-
-def cal_CF_similarity(item_table):
-    """
-    give a dictionary item_table {item : {user : rating - average}}, 
-    return a dictionary {(item_i, item_j): similarity between i,j}, restaurant_i and restaurant_j are sorted in ascending order
-    """
-    similarities = dict()
-    list_of_items = sorted(item_table.keys())
-    countnonezero, countzero = 0, 0
-    for i, item_i in enumerate(list_of_items[:-1]):
-        print "    calcuating:", i
-        for j in range(i+1, len(list_of_items)):
-            item_j = list_of_items[j]
-            product, sum_square1, sum_square2 = 0.0, 0.0, 0.0
-            for user in item_table[item_i].keys():
-                if user in item_table[item_j].keys():
-                    product += item_table[item_i][user] * item_table[item_j][user]
-                    sum_square1 += item_table[item_i][user]**2
-                    sum_square2 += item_table[item_j][user]**2
-            if sum_square1 == 0 or sum_square2 == 0:
-                countzero += 1
-                similarities[(item_i, item_j)] = 0
-            else:
-                countnonezero += 1
-                similarities[(item_i, item_j)] = product/math.sqrt(sum_square1 * sum_square2)
-    print "zero items in similarities:", countzero, "none-zero items in similarities:", countnonezero
-    return similarities
-
-def CF_prediction(similarities, user_rating_table, item_to_predict):
-    """
-    give a dictionary similarities{(item_i, item_j) : similarity} and user_rating_table {item : rating}} with
-    item in table all being items rated by the user, return a predicated rating for item of the user
-    """
-    if item_to_predict not in user_rating_table:
-        print "The user has rating for this item, don't need predication, return rating"
-        return user_rating_table[item_to_predict]
-    numerator, denominator = 0.0, 0.0
-    for item in user_rating_table:
-        key = sort([item_to_predict, item])
-        numerator += similarities(tuple(key)) * user_rating_table[item]
-        denominator += similarities(tuple(key))
-    return numerator/denominator
+            n += 1
+    return math.sqrt(err/n)
 
 def searchRestaurantsOnDistance(location, restaurants, numRecommendation):
     """
@@ -248,24 +269,18 @@ def main(argv):
     user_rating_table = build_user_rating_table(user_indexed_reviews)
 
     # CF evaluation
-#     print "calculating CF evaluations..."
-#     similarities = cal_CF_similarity(restaurant_user_table)
-#     CF_evaluations = CF_evaluating(test_user_data, similarities, user_rating_table)
-#     CF_rmses = cal_rmse(CF_evaluations)
-#     CF_total_rmse = 0
-#     for user, rmse in CF_rmses:
-#         CF_total_rmse += rmse
-#     print "final total CF rmse for the test data is:", total_rmse
+    print "calculating CF evaluations..."
+##     //similarities = cal_CF_similarity(restaurant_user_table)
+    CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
+    CF_rmse = cal_rmse(CF_evaluations)
+    print "final total CF rmse for the test data is:", CF_rmse
 
     # random evaluation
-    print "calculating random rmse..."
-    random.seed()
-    random_evaluations = random_evaluating(test_user_data)
-    random_rmses = cal_rmse(random_evaluations)
-    random_total_rmse = 0
-    for user, rmse in random_rmses:
-        random_total_rmse += rmse
-    print "final total CF rmse for the test data is:", random_total_rmse
+#    print "calculating random rmse..."
+#    random.seed()
+#    random_evaluations = random_evaluating(test_user_data)
+#    random_rmse = cal_rmse(random_evaluations)
+#    print "final total CF rmse for the test data is:", random_rmse
 
 
 if __name__ == '__main__':

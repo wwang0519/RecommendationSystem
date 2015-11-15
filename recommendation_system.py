@@ -1,16 +1,21 @@
 import utils
-import pickle
 import sys
 import random
 import math
+import yelp_data_preprocessing
+#import pickle
 
-print "loading all restaurants..."
-all_restaurants = pickle.load(open( "processed_restaurant_data.p", "rb" )) # {(business_id) : [restaurant_info]}
-print "successfully loaded", len(all_restaurants), "restaurants items."
 
-print "loading all users..."
-all_users = pickle.load(open( "processed_user_data.p", "rb" )) # {(user_id) : [user_info]}
-print "successfully loaded", len(all_users), "user items."
+# print "loading all restaurants..."
+# all_restaurants = pickle.load(open( "processed_restaurant_data.p", "rb" )) # {(business_id) : [restaurant_info]}
+# print "successfully loaded", len(all_restaurants), "restaurants items."
+
+# print "loading all users..."
+# all_users = pickle.load(open( "processed_user_data.p", "rb" )) # {(user_id) : [user_info]}
+# print "successfully loaded", len(all_users), "user items."
+
+all_restaurants = yelp_data_preprocessing.parse_restaurants()
+all_users = yelp_data_preprocessing.parse_users()
 
 def build_user_and_restaurant_indexed_reviews(all_reviews, user_indexed_reviews, restaurant_indexed_reviews):
     """
@@ -244,12 +249,14 @@ def test_searchRestaurantsOnDistance():
 def main(argv):
     # set necessary parameters
     review_minimum_num = 50
-    test_percentage = 0.3
+    test_percentage = 0.3 # percentage of test data in all data set
+    training_percentage = 0.5 # percentage of actual training set in all training data 
 
     # load data
-    print "loading all reivews..."
-    all_reviews = pickle.load(open( "processed_review_data.p", "rb" )) # {(user_id, business_id) : [review]}
-    print "successfully loaded", len(all_reviews), "review items."
+#     print "loading all reivews..."
+#     all_reviews = pickle.load(open( "processed_review_data.p", "rb" )) # {(user_id, business_id) : [review]}
+#     print "successfully loaded", len(all_reviews), "review items."
+    all_reviews = yelp_data_preprocessing.parse_reviews()
 
     # initialize data set
     user_indexed_reviews = dict()

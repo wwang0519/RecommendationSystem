@@ -16,6 +16,11 @@ import yelp_data_preprocessing
 all_restaurants = yelp_data_preprocessing.parse_restaurants()
 all_users = yelp_data_preprocessing.parse_users()
 
+for (user,), reviews in all_users.items():
+    print user, reviews[0]["average_stars"]
+
+        
+
 def build_user_and_restaurant_indexed_reviews(all_reviews, user_indexed_reviews, restaurant_indexed_reviews):
     """
     all_reviews is a dictionary {(user_id, business) : [review]}
@@ -278,49 +283,51 @@ def test_searchRestaurantsOnDistance():
         print ' '
 
 def main(argv):
-    # set necessary parameters
-    review_minimum_num = 50
-    test_percentage = 0.1 # percentage of test data in all data set
-    training_ratio = 0.75 # percentage of actual training set in all training data 
+#     # set necessary parameters
+#     review_minimum_num = 50
+#     test_percentage = 0.3 # percentage of test data in all data set
+#     training_ratio = 1 # percentage of actual training set in all training data 
 
-    # load data
-#     print "loading all reivews..."
-#     all_reviews = pickle.load(open( "processed_review_data.p", "rb" )) # {(user_id, business_id) : [review]}
-#     print "successfully loaded", len(all_reviews), "review items."
-    all_reviews = yelp_data_preprocessing.parse_reviews()
 
-    # initialize data set
-    user_indexed_reviews = dict()
-    restaurant_indexed_reviews = dict()
 
-    # build reviews that can be indexed from both user_id and restaurant_id 
-    print "building indexed dictionaries..."
-    build_user_and_restaurant_indexed_reviews(all_reviews, user_indexed_reviews, restaurant_indexed_reviews)
+#     # load data
+# #     print "loading all reivews..."
+# #     all_reviews = pickle.load(open( "processed_review_data.p", "rb" )) # {(user_id, business_id) : [review]}
+# #     print "successfully loaded", len(all_reviews), "review items."
+#     all_reviews = yelp_data_preprocessing.parse_reviews()
 
-    print "setting data for test purposes..."
-    test_user_set = get_test_users(user_indexed_reviews, review_minimum_num)
-    test_user_data = get_tests_and_update_reviews(user_indexed_reviews, restaurant_indexed_reviews, test_user_set, test_percentage)
+#     # initialize data set
+#     user_indexed_reviews = dict()
+#     restaurant_indexed_reviews = dict()
 
-    print "changing training_ratio..."
-    change_training_ratio(user_indexed_reviews, restaurant_indexed_reviews, training_ratio)
+#     # build reviews that can be indexed from both user_id and restaurant_id 
+#     print "building indexed dictionaries..."
+#     build_user_and_restaurant_indexed_reviews(all_reviews, user_indexed_reviews, restaurant_indexed_reviews)
 
-    restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews)
-    user_rating_table = build_user_rating_table(user_indexed_reviews)
+#     print "setting data for test purposes..."
+#     test_user_set = get_test_users(user_indexed_reviews, review_minimum_num)
+#     test_user_data = get_tests_and_update_reviews(user_indexed_reviews, restaurant_indexed_reviews, test_user_set, test_percentage)
 
-    # CF evaluation
-    print "calculating CF evaluations..."
-##     //similarities = cal_CF_similarity(restaurant_user_table)
-    CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
-    CF_rmse = cal_rmse(CF_evaluations)
-    print "final total CF rmse for the test data is:", CF_rmse, ", CF training ratio", training_ratio
+#     print "changing training_ratio..."
+#     change_training_ratio(user_indexed_reviews, restaurant_indexed_reviews, training_ratio)
 
-    # random evaluation
-#     print "calculating random rmse..."
-#     random.seed()
-#     random_evaluations = random_evaluating(test_user_data)
-#     random_rmse = cal_rmse(random_evaluations)
-#     print "final total CF rmse for the test data is:", random_rmse
+#     restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews)
+#     user_rating_table = build_user_rating_table(user_indexed_reviews)
 
+#     # CF evaluation
+#     print "calculating CF evaluations..."
+# ##     //similarities = cal_CF_similarity(restaurant_user_table)
+#     CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
+#     CF_rmse = cal_rmse(CF_evaluations)
+#     print "final total CF rmse for the test data is:", CF_rmse, ", CF training ratio", training_ratio
+
+#     # random evaluation
+# #     print "calculating random rmse..."
+# #     random.seed()
+# #     random_evaluations = random_evaluating(test_user_data)
+# #     random_rmse = cal_rmse(random_evaluations)
+# #     print "final total CF rmse for the test data is:", random_rmse
+    raise("not implemented")
 
 if __name__ == '__main__':
     main(sys.argv)

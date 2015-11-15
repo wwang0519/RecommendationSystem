@@ -264,7 +264,7 @@ def main(argv):
     # set necessary parameters
     review_minimum_num = 50
     test_percentage = 0.1 # percentage of test data in all data set
-    training_percentage = 1 # percentage of actual training set in all training data 
+    training_percentage = 0.5 # percentage of actual training set in all training data 
 
     # load data
 #     print "loading all reivews..."

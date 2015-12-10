@@ -273,10 +273,8 @@ def main(argv):
     all_reviews = yelp_data_preprocessing.parse_reviews()
 
     # initialize data set
-    user_indexed_reviews = dict()
-    restaurant_indexed_reviews = dict()
-    training_reviews = dict()
-    testing_reviews = dict()
+    user_indexed_reviews = dict()  # user -> review
+    restaurant_indexed_reviews = dict()  # {'business id': {'user':[review]}}, where review is a dict {'text':"It is good. "}
 
     # build reviews that can be indexed from both user_id and restaurant_id 
     print "building indexed dictionaries..."

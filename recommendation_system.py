@@ -304,13 +304,21 @@ def main(argv):
 
     # SVD evaluation
     #print "calculating SVD evaluations..."
-##     //similarities = cal_CF_similarity(restaurant_user_table)
     #SVD_evaluations = svd_evaluating(test_user_data, user_rating_table)
     #SVD_rmse = cal_rmse(SVD_evaluations)
     #print "final total SVD rmse for the test data is:", SVD_rmse
 
     # Content-based CF
+    # restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+
+    # Content-boosted CF
+    print "construct classifier for user..."
+    classfiers = extract_feature.construct_classifier_for_user(user_indexed_reviews)
+    print "extract tfidf feature for resaurant..."
     restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+    print "updat user rating table..."
+    user_rating_table = extract_feature.update_rating(restaurant_feature, classfiers, user_rating_table, restaurant_indexed_reviews)
+    #restaurant_user_table = extract_feature.update_difference()
 
 if __name__ == '__main__':
     main(sys.argv)

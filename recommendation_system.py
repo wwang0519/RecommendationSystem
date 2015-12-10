@@ -310,7 +310,7 @@ def main(argv):
     #print "final total SVD rmse for the test data is:", SVD_rmse
 
     # Content-based CF
-    restaurant_feature = extract_feature.extracttfidf(restaurant_indexed_reviews)
+    restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
 
 if __name__ == '__main__':
     main(sys.argv)

@@ -2,7 +2,7 @@ import utils
 import sys
 import random
 import math
-import yelp_data_preprocessing
+#import yelp_data_preprocessing
 import cPickle
 # import svd
 # import extract_feature
@@ -320,8 +320,10 @@ def main(argv):
     test_percentage = 0.1 # percentage of test data in all data set
     training_percentage = 0.25 # percentage of actual training set in all training data 
     data_size = 'Big'
+    training_method = 'CF' # random, CF, SVD, CBCF, WBCF
     pick_test_data = False
-
+    savefile = False
+    
     print "review_minimum_num:", review_minimum_num
     print "test_percentage:", test_percentage
     print "training_percentage:", training_percentage
@@ -329,89 +331,99 @@ def main(argv):
     print "pick_test_data:", pick_test_data
 
     # initialize variable
-    all_restaurants = yelp_data_preprocessing.parse_restaurants()
-    review_count = 1 if data_size == 'Big' else 200
+    print "load restaurants data..."
+    all_restaurants = cPickle.load(open('processed_restaurant_data.p', 'rb'))
+    print "successfully loaded restaurant data"
+
+    review_count = 1 if data_size == 'Big' else 500
     reserved_restaurants = []
     for (restaurant,), [reviews] in all_restaurants.items():
         if reviews['review_count'] >= 1:
             reserved_restaurants.append(restaurant)
-
     reserved_restaurants = set(reserved_restaurants)
 
-    all_reviews = yelp_data_preprocessing.parse_reviews()
+    print "load reviews data..."
+    all_reviews = cPickle.load(open('processed_review_data.p', 'rb'))
+    print "successfully loaded reviews data"
 
-    # initialize data set
+    #random evaluation
+    if training_method == 'random':
+        print "calculating random rmse..."
+        random.seed()
+        random_evaluations = random_evaluating(test_user_data)
+        random_rmse = cal_rmse(random_evaluations)
+        print "final total CF rmse for the test data is:", random_rmse
+        return
+
+    # other methods: initialize data set
     user_indexed_reviews = dict()  # user -> review
     restaurant_indexed_reviews = dict()  # {'business id': {'user':[review]}}, where review is a dict {'text':"It is good. "}
 
     # build reviews that can be indexed from both user_id and restaurant_id 
     print "building indexed dictionaries..."
     build_user_and_restaurant_indexed_reviews(all_reviews, user_indexed_reviews, restaurant_indexed_reviews, reserved_restaurants)
-
+    
     print "setting data for test purposes..."
     test_user_set = get_test_users(user_indexed_reviews, review_minimum_num)
-    test_user_data = get_tests_and_update_reviews(user_indexed_reviews, restaurant_indexed_reviews, test_user_set, test_percentage, pick_test_data)
-    print "total number of users in test_user_data:", len(test_user_data)
+
+    pick = '_pick' if pick_test_data else ''
+    testfile = data_size + pick + "_test_data_set.p"
+    if pick_test_data and (test_percentage == 0.25 or test_percentage == 0.5 or test_percentage == 0.75 or test_percentage == 1):
+        test_user_data = cPickle.load(open(testfile, 'rb'))
+    else:
+        test_user_data = get_tests_and_update_reviews(user_indexed_reviews, restaurant_indexed_reviews, test_user_set, test_percentage, pick_test_data)
+        print "total number of users in test_user_data:", len(test_user_data)
+
+    if savefile:
+        print "saving tests:"
+        cPickle.dump(test_user_data, open(testfile, 'wb'), protocol=2)
+        print "save data done"
 
     update_training_set(user_indexed_reviews, restaurant_indexed_reviews, training_percentage)
     print "total number of users in training data:", len(user_indexed_reviews)
     print "total number of restaurants in training data:", len(restaurant_indexed_reviews)
 
-    print "saving tests:"
-    pick = '_pick' if pick_test_data else ''
-    testfile = data_size + pick + "_test_data_set.p"
-    cPickle.dump(test_user_data, open(testfile, 'wb'), protocol=2)
-    
-    print "saving user_indexed_reviews"
-    userfile = data_size + str(training_percentage) + '_user_data_set.p'
-    cPickle.dump(user_indexed_reviews, open(userfile, 'wb'), protocol=2)
-
-    print "saving restaurant_indexed_reviews"
-    restaurantfile = data_size + str(training_percentage) + '_restaurant_data_set.p'
-    cPickle.dump(restaurant_indexed_reviews, open(restaurantfile, 'wb'), protocol=2)
-
-    print "save data done"
-
     restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews, user_indexed_reviews)
     user_rating_table = build_user_rating_table(user_indexed_reviews)
-    
-    # CF evaluation
-    print "calculating CF evaluations..."
-    CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
-    CF_rmse = cal_rmse(CF_evaluations)
-    print "final total CF rmse for the test data is:", CF_rmse
 
-#     #random evaluation
-#     print "calculating random rmse..."
-#     random.seed()
-#     random_evaluations = random_evaluating(test_user_data)
-#     random_rmse = cal_rmse(random_evaluations)
-#     print "final total CF rmse for the test data is:", random_rmse
+    # CF evaluation
+    if training_method == 'CF':
+        print "calculating CF evaluations..."
+        CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
+        CF_rmse = cal_rmse(CF_evaluations)
+        print "final total CF rmse for the test data is:", CF_rmse
+        return
 
     # SVD evaluation
-#    SVD_rmse = cal_rmse(SVD_evaluations)
-#    print "final total SVD rmse for the test data is:", SVD_rmse
-
-    #print "calculating SVD evaluations..."
-    #SVD_evaluations = svd_evaluating(test_user_data, user_rating_table)
-    #SVD_rmse = cal_rmse(SVD_evaluations)
-    #print "final total SVD rmse for the test data is:", SVD_rmse
-
-    # Content-based CF
-    # restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+    if training_method == 'SVD':
+        print "calculating SVD evaluations..."
+        SVD_evaluations = svd_evaluating(test_user_data, user_rating_table)
+        SVD_rmse = cal_rmse(SVD_evaluations)
+        print "final total SVD rmse for the test data is:", SVD_rmse
+        return
 
     # Content-boosted CF
-#     print 'Content-boosted CF'
-#     print len(user_indexed_reviews)
-#     extract_feature.construct_classifier_for_user(user_indexed_reviews, restaurant_indexed_reviews)
-#     restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews, user_indexed_reviews)
-#     user_rating_table = build_user_rating_table(user_indexed_reviews)
+    if training_method == 'CBCF':
+        print "calculating content-boosted CF evaluations..."
+        extract_feature.construct_classifier_for_user(user_indexed_reviews, restaurant_indexed_reviews)
+        restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews, user_indexed_reviews)
+        user_rating_table = build_user_rating_table(user_indexed_reviews)
+        CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
+        CF_rmse = cal_rmse(CF_evaluations)
+        print "final total CBCF rmse for the test data is:", CF_rmse
+        return
+    
+    # Word-based CF
+    if training_method == 'WBCF':
+        print 'calculating Word Based CF evaluations...'
+        restaurant_features = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+        CF_evaluations = WordBasedCF.CF_evaluating(test_user_data, user_rating_table, restaurant_features)
+        CF_rmse = cal_rmse(CF_evaluations)
+        print 'final total CF rmse for the test data is:', CF_rmse
+        return 
 
-#     # CF evaluation
-#     print "calculating CF evaluations..."
-#     CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
-#     CF_rmse = cal_rmse(CF_evaluations)
-#     print "final total CF rmse for the test data is:", CF_rmse 
+    print "ERROR: Unrecogized method!"
+    
 
 if __name__ == '__main__':
     main(sys.argv)

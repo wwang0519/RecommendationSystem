@@ -6,19 +6,15 @@ import yelp_data_preprocessing
 import svd
 import WordBasedCF
 import extract_feature
-#import pickle
-
-
-# print "loading all restaurants..."
-# all_restaurants = pickle.load(open( "processed_restaurant_data.p", "rb" )) # {(business_id) : [restaurant_info]}
-# print "successfully loaded", len(all_restaurants), "restaurants items."
-
-# print "loading all users..."
-# all_users = pickle.load(open( "processed_user_data.p", "rb" )) # {(user_id) : [user_info]}
-# print "successfully loaded", len(all_users), "user items."
 
 all_restaurants = yelp_data_preprocessing.parse_restaurants()
-all_users = yelp_data_preprocessing.parse_users()
+reserved_restaurants = []
+for (restaurant,), [reviews] in all_restaurants.items():
+    if reviews['review_count'] >= 1:
+        reserved_restaurants.append(restaurant)
+
+reserved_restaurants = set(reserved_restaurants)
+all_reviews = yelp_data_preprocessing.parse_reviews()
 
 def build_user_and_restaurant_indexed_reviews(all_reviews, user_indexed_reviews, restaurant_indexed_reviews):
     """
@@ -30,6 +26,8 @@ def build_user_and_restaurant_indexed_reviews(all_reviews, user_indexed_reviews,
     assert len(restaurant_indexed_reviews) == 0, "restaurant_indexed_reviews must be empty"
 
     for (user, restaurant), reviews in all_reviews.items():
+        if restaurant not in reserved_restaurants:
+            continue
         if user not in user_indexed_reviews:
             user_indexed_reviews[user] = dict()
         user_indexed_reviews[user][restaurant] = reviews
@@ -48,17 +46,46 @@ def get_test_users(user_indexed_reviews, required_review_num):
             tested_uid.add(user)
     return tested_uid
 
-def get_qualified_reviews(all_reviews, review_threshold):
+def pick_tests(user, user_indexed_reviews, restaurant_indexed_reviews, test_user_data, test_percentage):
     """
-    filter all_reviews and return a new review dictionary with the same structure
-    that only contains item that user at least reviewed review_threshold restaurants 
+    for the current user, pick out test data and delete corresponding entry in indexed reviews. pick out standard, for each picked out restaurant 
+    in user's reviews (among other restuarant js), at least min_similarity_num other users have rated both i and j
     """
-    qualified_reviews = dict()
-    user_indexed_reviews = get_user_indexed_reviews(all_reviews)
-    for (user, restaurant), reviews in all_reviews.items():
-        if len(user_indexed_reviews(user)) >= review_threshold:
-            qualified_reviews[(user, restaurant)] = reviews
-    return qualified_reviews
+    def count_common_raters(restaurant_i, restaurant_j, restaurant_indexed_reviews):
+        count = 0
+        for user in restaurant_indexed_reviews[restaurant_i]:
+            if user in restaurant_indexed_reviews[restaurant_j]:
+                count += 1
+        return count
+
+    total_review_num = len(user_indexed_reviews[user])
+    test_review_num = int(total_review_num * test_percentage)
+    restaurants = user_indexed_reviews[user].keys();
+    restaurant_pair_count = dict()
+    restaurant_count = dict()
+    for restaurant_i in restaurants:
+        count = 0
+        for restaurant_j in restaurants:
+            if restaurant_i == restaurant_j:
+                continue
+            pair = tuple(sorted([restaurant_i, restaurant_j]))
+            if pair in restaurant_pair_count:
+                count += restaurant_pair_count[pair]
+            else:
+                local_count = count_common_raters(restaurant_i, restaurant_j, restaurant_indexed_reviews)
+                count += local_count
+                restaurant_pair_count[pair] = local_count
+        restaurant_count[restaurant_i] = count
+    restaurant_count = restaurant_count.items()
+    restaurant_count.sort(key=lambda x:x[1], reverse=True)
+
+    for i in range(test_review_num):
+        restaurant = restaurant_count[i][0]
+        if restaurant_count[i][1] <= 2 * test_review_num:
+            break
+        test_user_data[user][restaurant] = user_indexed_reviews[user][restaurant]
+        del user_indexed_reviews[user][restaurant]
+        del restaurant_indexed_reviews[restaurant][user]
 
 def get_tests_and_update_reviews(user_indexed_reviews, restaurant_indexed_reviews, test_user_set, test_percentage):
     """
@@ -79,6 +106,8 @@ def get_tests_and_update_reviews(user_indexed_reviews, restaurant_indexed_review
             del restaurant_indexed_reviews[restaurant][test_user]
             if i == test_review_num:
                 break
+
+#        pick_tests(test_user, user_indexed_reviews, restaurant_indexed_reviews, test_user_data, test_percentage)
     return test_user_data
 
 def cal_average_rating(reviews): 
@@ -92,15 +121,32 @@ def cal_average_rating(reviews):
     rating /= count
     return rating 
 
-def build_restaurant_user_table(restaurant_indexed_reviews):
+def build_restaurant_user_table(restaurant_indexed_reviews, user_indexed_reviews):
     """
     return a dictionary {restaurant_id: {user who rated the resaurant: rating - this user's average rating}}
     """
+    def cal_user_average_rating(user_indexed_reviews, user):
+        """
+        for a given user, calculate this user's average rating for all the reviews in user_indexed_reviews table
+        """
+        total, count = 0, 0
+        for restaurant, reviews in user_indexed_reviews[user].items():
+            for review in reviews:
+                total += review['stars']
+                count += 1
+        return 1.0*total/count
+
+    user_average_table = dict()
     restaurant_user_table = dict() 
     for restaurant, user_reviews in restaurant_indexed_reviews.items():
         restaurant_user_table[restaurant] = dict()
         for user, reviews in user_reviews.items():
-            restaurant_user_table[restaurant][user] = cal_average_rating(reviews) - all_restaurants[(restaurant,)][0]["stars"]
+            if user in user_average_table:
+                average = user_average_table[user]
+            else:
+                average = cal_user_average_rating(user_indexed_reviews, user)
+                user_average_table[user] = average
+            restaurant_user_table[restaurant][user] = cal_average_rating(reviews) - average#all_restaurants[(restaurant,)][0]["stars"]
     return restaurant_user_table
 
 def build_user_rating_table(user_indexed_reviews):
@@ -114,6 +160,10 @@ def build_user_rating_table(user_indexed_reviews):
             user_rating_table[user][restaurant] = cal_average_rating(reviews)
     return user_rating_table
 
+global_total_count = 0
+global_count = 0
+global_count2= 0
+
 def CF_evaluating(test_user_data, user_rating_table, item_table):
     """
     calculate evaluations using collaborative filtering
@@ -124,14 +174,11 @@ def CF_evaluating(test_user_data, user_rating_table, item_table):
     """
     evaluations = dict() 
     count = 1
-#    print "total number of users to evaluate:", len(test_user_data)
-    for user in test_user_data.keys():
-#        print "    ", count
+    for user in test_user_data:
         count += 1
         count_item = 1
         evaluations[user] = dict()
         for restaurant, reviews in test_user_data[user].items():
-#            print "    count item:", count_item
             count_item += 1
             true_rating = cal_average_rating(reviews)
             prediction = CF_prediction(user_rating_table[user], item_table, restaurant, user)
@@ -145,20 +192,25 @@ def CF_prediction(item_rating_table, item_table, item_to_predict, user):
     with item in table all being items rated by the user, 
     return a predicated rating for item of the user
     """
+    global global_count, global_total_count
     if item_to_predict in item_rating_table:
         print "The user has rating for this item, don't need predication, return rating"
         return item_rating_table[item_to_predict]
     numerator, denominator = 0.0, 0.0
     for item in item_rating_table:
-#        key = sort([item_to_predict, item])
         similarity = cal_CF_similarity(item_to_predict, item, item_table)
+        global_total_count += 1
+        if similarity == 0:
+            global_count += 1
         numerator += similarity * item_rating_table[item]
         denominator += similarity
     if denominator == 0: 
-        prediction = all_users[(user,)][0]["average_stars"]
+        prediction = random.randint(1, 10) * 0.5#all_users[(user,)][0]["average_stars"]
     else:
         prediction = numerator/denominator
-    return prediction
+        if prediction < 0.5:
+            prediction = 0.5
+    return round(prediction*2)/2
 
 def cal_CF_similarity(item_i, item_j, item_table):
     """
@@ -166,15 +218,17 @@ def cal_CF_similarity(item_i, item_j, item_table):
     return the CF similarity of item_i, item_j
     """
     product, sum_square1, sum_square2 = 0.0, 0.0, 0.0
-    for user in item_table[item_i].keys():
-        if user in item_table[item_j].keys():
+    for user in item_table[item_i]:
+        if user in item_table[item_j]:
             product += item_table[item_i][user] * item_table[item_j][user]
             sum_square1 += item_table[item_i][user]**2
             sum_square2 += item_table[item_j][user]**2
-        if sum_square1 == 0 or sum_square2 == 0:
-            return 0
-        else:
-            return product/math.sqrt(sum_square1 * sum_square2)
+    if sum_square2 == 0:
+        global_count2 += 1
+    if sum_square1 == 0 or sum_square2 == 0:
+        return 0
+    else:
+        return abs(product)/math.sqrt(sum_square1 * sum_square2)
                 
 def cal_CF_similarity_table(item_table):
     """
@@ -249,7 +303,7 @@ def test_searchRestaurantsOnDistance():
         searchRestaurantsOnDistance(location, restaurants, 10)
         print ' '
 
-def svd_evaluating(test_user_data, user_rating_table):
+def svd_evaluating(test_user_data, user_rating_table, number_of_users):
     """
     calculate evaluations using svd
     test_user_data -- {user : {restaurant : [reviews]}}
@@ -257,22 +311,29 @@ def svd_evaluating(test_user_data, user_rating_table):
     return evaluations -- {user : {restaurant : (true_rating, prediction)}}
     """
     # svd
-    svd_model = svd.SVD(len(all_users), len(all_restaurants), user_rating_table)
+    svd_model = svd.SVD(number_of_users, len(all_restaurants), user_rating_table)
     svd_model.svd_training(user_rating_table, test_user_data, 30)
     evaluations = svd_model.svd_test(test_user_data)
     return evaluations
+
+def update_training_set(user_indexed_reviews, restaurant_indexed_reviews, training_percentage):
+    for user, restaurant_reviews in user_indexed_reviews.items():
+        total_reviews = len(restaurant_reviews)
+        training_reviews = int(total_reviews * training_percentage)
+        if training_reviews <= 0:
+            training_reviews = 1 
+        delete_reviews = total_reviews - training_reviews
+        for i, (restaurant, reviews) in enumerate(restaurant_reviews.items()):
+            if i >= delete_reviews:
+                break
+            del user_indexed_reviews[user][restaurant]
+            del restaurant_indexed_reviews[restaurant][user]
 
 def main(argv):
     # set necessary parameters
     review_minimum_num = 50
     test_percentage = 0.1 # percentage of test data in all data set
-    training_percentage = 0.5 # percentage of actual training set in all training data 
-
-    # load data
-#     print "loading all reivews..."
-#     all_reviews = pickle.load(open( "processed_review_data.p", "rb" )) # {(user_id, business_id) : [review]}
-#     print "successfully loaded", len(all_reviews), "review items."
-    all_reviews = yelp_data_preprocessing.parse_reviews()
+    training_percentage = 0.25 # percentage of actual training set in all training data 
 
     # initialize data set
     user_indexed_reviews = dict()  # user -> review
@@ -285,23 +346,29 @@ def main(argv):
     print "setting data for test purposes..."
     test_user_set = get_test_users(user_indexed_reviews, review_minimum_num)
     test_user_data = get_tests_and_update_reviews(user_indexed_reviews, restaurant_indexed_reviews, test_user_set, test_percentage)
+    print "total number of users in test_user_data:", len(test_user_data)
 
-    restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews)
+    update_training_set(user_indexed_reviews, restaurant_indexed_reviews, training_percentage)
+
+    restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews, user_indexed_reviews)
     user_rating_table = build_user_rating_table(user_indexed_reviews)
-
+    
     # CF evaluation
-    #print "calculating CF evaluations..."
-##     //similarities = cal_CF_similarity(restaurant_user_table)
-    #CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
-    #CF_rmse = cal_rmse(CF_evaluations)
-    #print "final total CF rmse for the test data is:", CF_rmse
+    print "calculating CF evaluations..."
+    CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
+    CF_rmse = cal_rmse(CF_evaluations)
+    print "final total CF rmse for the test data is:", CF_rmse
+    print "global total count is", global_total_count
+    print "global count is", global_count
+    print "global count2 is", global_count2
 
-    # random evaluation
-#    print "calculating random rmse..."
-#    random.seed()
-#    random_evaluations = random_evaluating(test_user_data)
-#    random_rmse = cal_rmse(random_evaluations)
-#    print "final total CF rmse for the test data is:", random_rmse
+
+#     #random evaluation
+#     print "calculating random rmse..."
+#     random.seed()
+#     random_evaluations = random_evaluating(test_user_data)
+#     random_rmse = cal_rmse(random_evaluations)
+#     print "final total CF rmse for the test data is:", random_rmse
 
     # SVD evaluation
 #    print "calculating SVD evaluations..."
@@ -321,6 +388,25 @@ def main(argv):
     CF_rmse = cal_rmse(CF_evaluations)
     print "final total CF rmse for the test data is:", CF_rmse
 
+#    SVD_evaluations = svd_evaluating(test_user_data, user_rating_table, len(user_indexed_reviews))
+#    SVD_rmse = cal_rmse(SVD_evaluations)
+#    print "final total SVD rmse for the test data is:", SVD_rmse
+
+    #print "calculating SVD evaluations..."
+    #SVD_evaluations = svd_evaluating(test_user_data, user_rating_table)
+    #SVD_rmse = cal_rmse(SVD_evaluations)
+    #print "final total SVD rmse for the test data is:", SVD_rmse
+
+    # Content-based CF
+    # restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+
+    # Content-boosted CF
+    classfiers = extract_feature.construct_classifier_for_user(user_indexed_reviews)
+    print "extract tfidf feature for resaurant..."
+    restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+    print "updat user rating table..."
+    user_rating_table = extract_feature.update_rating(restaurant_feature, classfiers, user_rating_table, restaurant_indexed_reviews)
+    #restaurant_user_table = extract_feature.update_difference()
 
 if __name__ == '__main__':
     main(sys.argv)

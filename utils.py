@@ -1,5 +1,6 @@
 import json
 import math
+from scipy.sparse import csr_matrix
 
 def isJson(f):
     """                                                                                                                                      
@@ -100,33 +101,21 @@ def cal_rmse(evaluation_table):
 def cal_pearson_corr(v1,v2):
     # calculate pearson correlation for vector v1 and v2, where v1 and v2 are lists
     
-    assert(len(v1) == len(v2))
+    # v1 = v1.toarray()
+    # v1 = v1.flatten()
+    # mean1 = np.mean(v1)
+    # v1 = v1 - mean1
+    # v2 = v2.toarray()
+    # v2 = v2.flatten()
+    # mean2 = np.mean(v2)
+    # v2 = v2 - mean2
+    # 
+    # numerator = np.dot(v1,v2)
+    # denominator1 = np.dot(v1,v1)
+    # denominator2 = np.dot(v2,v2)
+    # return numerator / (math.sqrt(denominator1 * denominator2))
     
-    numerator = 0.0
-    denominator1 = 0.0
-    denominator2 = 0.0
-    
-    for i in range(len(v1)):
-        numerator += v1[i] * v2[i]
-        denominator1 += v1[i] ** 2
-        denominator2 += v2[i] ** 2
-    
+    numerator = v1.dot(v2.transpose()).todense().item()
+    denominator1 = v1.dot(v1.transpose()).todense().item()
+    denominator2 = v2.dot(v2.transpose()).todense().item()
     return numerator / (math.sqrt(denominator1 * denominator2))
-    
-    product, sum_square1, sum_square2 = 0.0, 0.0, 0.0
-    for user in item_table[item_i].keys():
-        if user in item_table[item_j].keys():
-            product += item_table[item_i][user] * item_table[item_j][user]
-            sum_square1 += item_table[item_i][user]**2
-            sum_square2 += item_table[item_j][user]**2
-        if sum_square1 == 0 or sum_square2 == 0:
-            return 0
-        else:
-            return product/math.sqrt(sum_square1 * sum_square2)
-
-def mean_centering(dictionary):
-    # mean centering of a dictionary {key:value}, where value is a list
-    for key,value in dictionary:
-        mean = reduce(lambda x, y: x + y, value) / len(value)  # mean of the list
-        value = [v-mean for v in value]
-

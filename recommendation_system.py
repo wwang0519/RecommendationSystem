@@ -4,6 +4,7 @@ import random
 import math
 import yelp_data_preprocessing
 import svd
+import WordBasedCF
 import extract_feature
 #import pickle
 
@@ -124,7 +125,7 @@ def CF_evaluating(test_user_data, user_rating_table, item_table):
     evaluations = dict() 
     count = 1
 #    print "total number of users to evaluate:", len(test_user_data)
-    for user in test_user_data:
+    for user in test_user_data.keys():
 #        print "    ", count
         count += 1
         count_item = 1
@@ -165,8 +166,8 @@ def cal_CF_similarity(item_i, item_j, item_table):
     return the CF similarity of item_i, item_j
     """
     product, sum_square1, sum_square2 = 0.0, 0.0, 0.0
-    for user in item_table[item_i]:
-        if user in item_table[item_j]:
+    for user in item_table[item_i].keys():
+        if user in item_table[item_j].keys():
             product += item_table[item_i][user] * item_table[item_j][user]
             sum_square1 += item_table[item_i][user]**2
             sum_square2 += item_table[item_j][user]**2
@@ -203,7 +204,7 @@ def random_evaluating(test_user_data):
     return evaluations -- {user : {restaurant : (true_rating, prediction)}}
     """
     evaluations = dict() 
-    for user in test_user_data:
+    for user in test_user_data.keys():
         evaluations[user] = dict()
         for restaurant, reviews in test_user_data[user].items():
             true_rating = cal_average_rating(reviews)
@@ -303,14 +304,23 @@ def main(argv):
 #    print "final total CF rmse for the test data is:", random_rmse
 
     # SVD evaluation
-    #print "calculating SVD evaluations..."
+#    print "calculating SVD evaluations..."
 ##     //similarities = cal_CF_similarity(restaurant_user_table)
-    #SVD_evaluations = svd_evaluating(test_user_data, user_rating_table)
-    #SVD_rmse = cal_rmse(SVD_evaluations)
-    #print "final total SVD rmse for the test data is:", SVD_rmse
+#    SVD_evaluations = svd_evaluating(test_user_data, user_rating_table)
+#    SVD_rmse = cal_rmse(SVD_evaluations)
+#    print "final total SVD rmse for the test data is:", SVD_rmse
 
-    # Content-based CF
-    restaurant_feature = extract_feature.extracttfidf(restaurant_indexed_reviews)
+    # Word Based CF evaluation
+    print "calculating Word Based CF evaluations..."
+##     //similarities = cal_CF_similarity(restaurant_user_table)
+    # calculate restaurant features
+    restaurant_features = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+    print "Word Based CF evaluating"
+    CF_evaluations = WordBasedCF.CF_evaluating(test_user_data, user_rating_table, restaurant_features)
+    print "calculating rmse"
+    CF_rmse = cal_rmse(CF_evaluations)
+    print "final total CF rmse for the test data is:", CF_rmse
+
 
 if __name__ == '__main__':
     main(sys.argv)

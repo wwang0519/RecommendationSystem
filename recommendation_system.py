@@ -3,9 +3,12 @@ import sys
 import random
 import math
 import yelp_data_preprocessing
-#import svd
-#import extract_feature
 import cPickle
+# import svd
+# import extract_feature
+# import svd
+# import WordBasedCF
+# import extract_feature
 
 def build_user_and_restaurant_indexed_reviews(all_reviews, user_indexed_reviews, restaurant_indexed_reviews, reserved_restaurants):
     """
@@ -240,7 +243,7 @@ def random_evaluating(test_user_data):
     return evaluations -- {user : {restaurant : (true_rating, prediction)}}
     """
     evaluations = dict() 
-    for user in test_user_data:
+    for user in test_user_data.keys():
         evaluations[user] = dict()
         for restaurant, reviews in test_user_data[user].items():
             true_rating = cal_average_rating(reviews)
@@ -371,7 +374,7 @@ def main(argv):
 
     restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews, user_indexed_reviews)
     user_rating_table = build_user_rating_table(user_indexed_reviews)
-
+    
     # CF evaluation
     print "calculating CF evaluations..."
     CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
@@ -386,8 +389,6 @@ def main(argv):
 #     print "final total CF rmse for the test data is:", random_rmse
 
     # SVD evaluation
-#    print "calculating SVD evaluations..."
-#    SVD_evaluations = svd_evaluating(test_user_data, user_rating_table, len(user_indexed_reviews), len(restaurant_indexed_reviews))
 #    SVD_rmse = cal_rmse(SVD_evaluations)
 #    print "final total SVD rmse for the test data is:", SVD_rmse
 
@@ -400,13 +401,17 @@ def main(argv):
     # restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
 
     # Content-boosted CF
-#     print "construct classifier for user..."
-#     classfiers = extract_feature.construct_classifier_for_user(user_indexed_reviews)
-#     print "extract tfidf feature for resaurant..."
-#     restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
-#     print "updat user rating table..."
-#     user_rating_table = extract_feature.update_rating(restaurant_feature, classfiers, user_rating_table, restaurant_indexed_reviews)
-#     #restaurant_user_table = extract_feature.update_difference()
+#     print 'Content-boosted CF'
+#     print len(user_indexed_reviews)
+#     extract_feature.construct_classifier_for_user(user_indexed_reviews, restaurant_indexed_reviews)
+#     restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews, user_indexed_reviews)
+#     user_rating_table = build_user_rating_table(user_indexed_reviews)
+
+#     # CF evaluation
+#     print "calculating CF evaluations..."
+#     CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
+#     CF_rmse = cal_rmse(CF_evaluations)
+#     print "final total CF rmse for the test data is:", CF_rmse 
 
 if __name__ == '__main__':
     main(sys.argv)

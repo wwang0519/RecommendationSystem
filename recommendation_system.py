@@ -390,7 +390,7 @@ def main(argv):
     # SVD evaluation
     if training_method == 'SVD':
         print "calculating SVD evaluations..."
-        SVD_evaluations = svd_evaluating(test_user_data, user_rating_table)
+        SVD_evaluations = svd_evaluating(test_user_data, user_rating_table, len(user_indexed_reviews), len(restaurant_indexed_reviews))
         SVD_rmse = cal_rmse(SVD_evaluations)
         print "final total SVD rmse for the test data is:", SVD_rmse
         return

@@ -4,6 +4,7 @@ import random
 import math
 import yelp_data_preprocessing
 import svd
+import extract_feature
 
 all_restaurants = yelp_data_preprocessing.parse_restaurants()
 reserved_restaurants = []
@@ -172,7 +173,7 @@ def CF_evaluating(test_user_data, user_rating_table, item_table):
     """
     evaluations = dict() 
     count = 1
-    for user in test_user_data.keys():
+    for user in test_user_data:
         count += 1
         count_item = 1
         evaluations[user] = dict()
@@ -257,7 +258,7 @@ def random_evaluating(test_user_data):
     return evaluations -- {user : {restaurant : (true_rating, prediction)}}
     """
     evaluations = dict() 
-    for user in test_user_data.keys():
+    for user in test_user_data:
         evaluations[user] = dict()
         for restaurant, reviews in test_user_data[user].items():
             true_rating = cal_average_rating(reviews)
@@ -335,8 +336,8 @@ def main(argv):
     training_percentage = 0.25 # percentage of actual training set in all training data 
 
     # initialize data set
-    user_indexed_reviews = dict()
-    restaurant_indexed_reviews = dict()
+    user_indexed_reviews = dict()  # user -> review
+    restaurant_indexed_reviews = dict()  # {'business id': {'user':[review]}}, where review is a dict {'text':"It is good. "}
 
     # build reviews that can be indexed from both user_id and restaurant_id 
     print "building indexed dictionaries..."
@@ -375,6 +376,22 @@ def main(argv):
 #    SVD_rmse = cal_rmse(SVD_evaluations)
 #    print "final total SVD rmse for the test data is:", SVD_rmse
 
+    #print "calculating SVD evaluations..."
+    #SVD_evaluations = svd_evaluating(test_user_data, user_rating_table)
+    #SVD_rmse = cal_rmse(SVD_evaluations)
+    #print "final total SVD rmse for the test data is:", SVD_rmse
+
+    # Content-based CF
+    # restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+
+    # Content-boosted CF
+#     print "construct classifier for user..."
+#     classfiers = extract_feature.construct_classifier_for_user(user_indexed_reviews)
+#     print "extract tfidf feature for resaurant..."
+#     restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+#     print "updat user rating table..."
+#     user_rating_table = extract_feature.update_rating(restaurant_feature, classfiers, user_rating_table, restaurant_indexed_reviews)
+#     #restaurant_user_table = extract_feature.update_difference()
 
 if __name__ == '__main__':
     main(sys.argv)

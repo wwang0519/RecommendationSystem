@@ -312,14 +312,40 @@ def update_training_set(user_indexed_reviews, restaurant_indexed_reviews, traini
             del user_indexed_reviews[user][restaurant]
             del restaurant_indexed_reviews[restaurant][user]
 
-def main(argv):
+def CF_Evaluation(training_percentage, pick_test_data, data_size):
+    training_method = 'CF'
+    if data_size == 'Small':
+        pick_test_data = False
+    return Evaluate(training_method, training_percentage, data_size, pick_test_data)
+
+def random_Evaluation(data_size):
+    training_method = 'random'
+    training_percentage = 1
+    pick_test_data = False
+    return Evaluate(training_method, training_percentage, data_size, pick_test_data)
+
+def SVD_Evaluation(training_percentage, pick_test_data, data_size):
+    training_method = 'SVD'
+    if data_size == 'Small':
+        pick_test_data = False
+    return Evaluate(training_method, training_percentage, data_size, pick_test_data)
+
+def CBCF_Evaluation(training_percentage):
+    data_size = 'Small'
+    pick_test_data = False
+    training_method = 'CBCF'
+    return Evaluate(training_method, training_percentage, data_size, pick_test_data)
+
+def WBCF(training_percentage):
+    data_size = 'Small'
+    pick_test_data = False
+    training_method = 'WBCF'
+    return Evaluate(training_method, training_percentage, data_size, pick_test_data)
+
+def Evaluate(training_method, training_percentage, data_size, pick_test_data):
     # set necessary parameters
     review_minimum_num = 50
     test_percentage = 0.1 # percentage of test data in all data set
-    training_percentage = 0.25 # percentage of actual training set in all training data 
-    data_size = 'Small'
-    training_method = 'CF' # random, CF, SVD, CBCF, WBCF
-    pick_test_data = True
     savefile = False
 
     print "review_minimum_num:", review_minimum_num
@@ -327,9 +353,10 @@ def main(argv):
     print "training_percentage:", training_percentage
     print "data_size:", data_size
     print "pick_test_data:", pick_test_data
+    print "training_method:", training_method
 
     # initialize variable
-    all_restaurants = yelp_data_preprocessing.parse_restaurants()# cPickle.load(open('processed_restaurant_data.p', 'rb'))
+    all_restaurants = yelp_data_preprocessing.parse_restaurants()
 
     review_count = 1 if data_size == 'Big' else 500
     reserved_restaurants = []
@@ -338,7 +365,7 @@ def main(argv):
             reserved_restaurants.append(restaurant)
     reserved_restaurants = set(reserved_restaurants)
 
-    all_reviews = yelp_data_preprocessing.parse_reviews()#cPickle.load(open('processed_review_data.p', 'rb'))
+    all_reviews = yelp_data_preprocessing.parse_reviews()
 
     #random evaluation
     if training_method == 'random':
@@ -347,7 +374,7 @@ def main(argv):
         random_evaluations = random_evaluating(test_user_data)
         random_rmse = cal_rmse(random_evaluations)
         print "final total CF rmse for the test data is:", random_rmse
-        return
+        return random_rmse
 
     # other methods: initialize data set
     user_indexed_reviews = dict()  # user -> review
@@ -386,7 +413,7 @@ def main(argv):
         CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
         CF_rmse = cal_rmse(CF_evaluations)
         print "final total CF rmse for the test data is:", CF_rmse
-        return
+        return CF_rmse
 
     # SVD evaluation
     if training_method == 'SVD':
@@ -394,7 +421,7 @@ def main(argv):
         SVD_evaluations = svd_evaluating(test_user_data, user_rating_table, len(user_indexed_reviews), len(restaurant_indexed_reviews))
         SVD_rmse = cal_rmse(SVD_evaluations)
         print "final total SVD rmse for the test data is:", SVD_rmse
-        return
+        return SVD_rmse
 
     # Content-boosted CF
     if training_method == 'CBCF':
@@ -402,22 +429,129 @@ def main(argv):
         extract_feature.construct_classifier_for_user(user_indexed_reviews, restaurant_indexed_reviews)
         restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews, user_indexed_reviews)
         user_rating_table = build_user_rating_table(user_indexed_reviews)
-        CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
-        CF_rmse = cal_rmse(CF_evaluations)
-        print "final total CBCF rmse for the test data is:", CF_rmse
-        return
+        CBCF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
+        CBCF_rmse = cal_rmse(CBCF_evaluations)
+        print "final total CBCF rmse for the test data is:", CBCF_rmse
+        return CBCF_rmse
     
     # Word-based CF
     if training_method == 'WBCF':
         print 'calculating Word Based CF evaluations...'
         restaurant_features = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
-        CF_evaluations = WordBasedCF.CF_evaluating(test_user_data, user_rating_table, restaurant_features)
-        CF_rmse = cal_rmse(CF_evaluations)
-        print 'final total CF rmse for the test data is:', CF_rmse
-        return 
+        WBCF_evaluations = WordBasedCF.CF_evaluating(test_user_data, user_rating_table, restaurant_features)
+        WBCF_rmse = cal_rmse(WBCF_evaluations)
+        print 'final total WBCF rmse for the test data is:', WBCF_rmse
+        return WBCF_rmse
 
     print "ERROR: Unrecogized method!"
+    return None
+
+# def main(argv):
+#     # set necessary parameters
+#     review_minimum_num = 50
+#     test_percentage = 0.1 # percentage of test data in all data set
+#     training_percentage = 0.5 # percentage of actual training set in all training data 
+#     data_size = 'Small'
+#     training_method = 'CF' # random, CF, SVD, CBCF, WBCF
+#     pick_test_data = False
+#     savefile = False
+
+#     print "review_minimum_num:", review_minimum_num
+#     print "test_percentage:", test_percentage
+#     print "training_percentage:", training_percentage
+#     print "data_size:", data_size
+#     print "pick_test_data:", pick_test_data
+
+#     # initialize variable
+#     all_restaurants = yelp_data_preprocessing.parse_restaurants()# cPickle.load(open('processed_restaurant_data.p', 'rb'))
+
+#     review_count = 1 if data_size == 'Big' else 500
+#     reserved_restaurants = []
+#     for (restaurant,), [reviews] in all_restaurants.items():
+#         if reviews['review_count'] >= review_count:
+#             reserved_restaurants.append(restaurant)
+#     reserved_restaurants = set(reserved_restaurants)
+
+#     all_reviews = yelp_data_preprocessing.parse_reviews()#cPickle.load(open('processed_review_data.p', 'rb'))
+
+#     #random evaluation
+#     if training_method == 'random':
+#         print "calculating random rmse..."
+#         random.seed()
+#         random_evaluations = random_evaluating(test_user_data)
+#         random_rmse = cal_rmse(random_evaluations)
+#         print "final total CF rmse for the test data is:", random_rmse
+#         return
+
+#     # other methods: initialize data set
+#     user_indexed_reviews = dict()  # user -> review
+#     restaurant_indexed_reviews = dict()  # {'business id': {'user':[review]}}, where review is a dict {'text':"It is good. "}
+
+#     # build reviews that can be indexed from both user_id and restaurant_id 
+#     print "building indexed dictionaries..."
+#     build_user_and_restaurant_indexed_reviews(all_reviews, user_indexed_reviews, restaurant_indexed_reviews, reserved_restaurants)
+    
+#     print "setting data for test purposes..."
+#     test_user_set = get_test_users(user_indexed_reviews, review_minimum_num)
+
+#     pick = '_pick' if pick_test_data else ''
+#     testfile = data_size + pick + "_test_data_set.p"
+#     if pick_test_data:
+#         test_user_data = cPickle.load(open(testfile, 'rb'))
+#     else:
+#         test_user_data = get_tests_and_update_reviews(user_indexed_reviews, restaurant_indexed_reviews, test_user_set, test_percentage, pick_test_data)
+#         print "total number of users in test_user_data:", len(test_user_data)
+
+#     if savefile:
+#         print "saving tests:"
+#         cPickle.dump(test_user_data, open(testfile, 'wb'), protocol=2)
+#         print "save data done"
+
+#     update_training_set(user_indexed_reviews, restaurant_indexed_reviews, training_percentage)
+#     print "total number of users in training data:", len(user_indexed_reviews)
+#     print "total number of restaurants in training data:", len(restaurant_indexed_reviews)
+
+#     restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews, user_indexed_reviews)
+#     user_rating_table = build_user_rating_table(user_indexed_reviews)
+
+#     # CF evaluation
+#     if training_method == 'CF':
+#         print "calculating CF evaluations..."
+#         CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
+#         CF_rmse = cal_rmse(CF_evaluations)
+#         print "final total CF rmse for the test data is:", CF_rmse
+#         return
+
+#     # SVD evaluation
+#     if training_method == 'SVD':
+#         print "calculating SVD evaluations..."
+#         SVD_evaluations = svd_evaluating(test_user_data, user_rating_table, len(user_indexed_reviews), len(restaurant_indexed_reviews))
+#         SVD_rmse = cal_rmse(SVD_evaluations)
+#         print "final total SVD rmse for the test data is:", SVD_rmse
+#         return
+
+#     # Content-boosted CF
+#     if training_method == 'CBCF':
+#         print "calculating content-boosted CF evaluations..."
+#         extract_feature.construct_classifier_for_user(user_indexed_reviews, restaurant_indexed_reviews)
+#         restaurant_user_table = build_restaurant_user_table(restaurant_indexed_reviews, user_indexed_reviews)
+#         user_rating_table = build_user_rating_table(user_indexed_reviews)
+#         CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
+#         CF_rmse = cal_rmse(CF_evaluations)
+#         print "final total CBCF rmse for the test data is:", CF_rmse
+#         return
+    
+#     # Word-based CF
+#     if training_method == 'WBCF':
+#         print 'calculating Word Based CF evaluations...'
+#         restaurant_features = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+#         CF_evaluations = WordBasedCF.CF_evaluating(test_user_data, user_rating_table, restaurant_features)
+#         CF_rmse = cal_rmse(CF_evaluations)
+#         print 'final total CF rmse for the test data is:', CF_rmse
+#         return 
+
+#     print "ERROR: Unrecogized method!"
     
 
-if __name__ == '__main__':
-    main(sys.argv)
+# if __name__ == '__main__':
+#     main(sys.argv)

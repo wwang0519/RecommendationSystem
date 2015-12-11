@@ -7,9 +7,8 @@ import utils
 def extracttfidf_restaurant(restaurant_indexed_reviews):
     """
     extract tf-idf feature for each restaurant
-    restaurant_indexed_reviews is a new review dictionary {business_id : {user_id : [review]}} that can be indexed by restaurant_id
-	return restaurant_features -- {restaurant: sparse array(word vector)}
-	"""
+    restaurant_indexed_reviews is a new review dictionary {business_id : {user_id : [review]}} that can be indexed by restaurant_id return restaurant_features -- {restaurant: sparse array(word vector)}
+    """
     restaurant_feature = dict()
     restaurant_all_reviews = []
     for restaurant in restaurant_indexed_reviews:

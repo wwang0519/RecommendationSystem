@@ -6,9 +6,7 @@ import yelp_data_preprocessing
 import cPickle
 import svd
 import extract_feature
-import svd
 import WordBasedCF
-import extract_feature
 
 def build_user_and_restaurant_indexed_reviews(all_reviews, user_indexed_reviews, restaurant_indexed_reviews, reserved_restaurants):
     """

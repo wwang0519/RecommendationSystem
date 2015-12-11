@@ -73,8 +73,8 @@ def pick_tests(user, user_indexed_reviews, restaurant_indexed_reviews, test_user
 
     for i in range(test_review_num):
         restaurant = restaurant_count[i][0]
-        if restaurant_count[i][1] <= 2 * test_review_num:
-            break
+#         if restaurant_count[i][1] <= 2 * test_review_num:
+#             break
         test_user_data[user][restaurant] = user_indexed_reviews[user][restaurant]
         del user_indexed_reviews[user][restaurant]
         del restaurant_indexed_reviews[restaurant][user]
@@ -181,9 +181,9 @@ def CF_prediction(item_rating_table, item_table, item_to_predict, user):
     with item in table all being items rated by the user, 
     return a predicated rating for item of the user
     """
-    if item_to_predict in item_rating_table:
-        print "The user has rating for this item, don't need predication, return rating"
-        return item_rating_table[item_to_predict]
+#     if item_to_predict in item_rating_table:
+#         print "The user has rating for this item, don't need predication, return rating"
+#         return item_rating_table[item_to_predict]
     numerator, denominator = 0.0, 0.0
     for item in item_rating_table:
         similarity = cal_CF_similarity(item_to_predict, item, item_table)
@@ -319,9 +319,9 @@ def main(argv):
     training_percentage = 0.25 # percentage of actual training set in all training data 
     data_size = 'Small'
     training_method = 'CF' # random, CF, SVD, CBCF, WBCF
-    pick_test_data = False
+    pick_test_data = True
     savefile = False
-    
+
     print "review_minimum_num:", review_minimum_num
     print "test_percentage:", test_percentage
     print "training_percentage:", training_percentage

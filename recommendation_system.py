@@ -364,7 +364,7 @@ def main(argv):
 
     pick = '_pick' if pick_test_data else ''
     testfile = data_size + pick + "_test_data_set.p"
-    if pick_test_data and (test_percentage == 0.25 or test_percentage == 0.5 or test_percentage == 0.75 or test_percentage == 1):
+    if pick_test_data:
         test_user_data = cPickle.load(open(testfile, 'rb'))
     else:
         test_user_data = get_tests_and_update_reviews(user_indexed_reviews, restaurant_indexed_reviews, test_user_set, test_percentage, pick_test_data)

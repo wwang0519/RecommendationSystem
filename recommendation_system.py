@@ -331,9 +331,7 @@ def main(argv):
     print "pick_test_data:", pick_test_data
 
     # initialize variable
-    print "load restaurants data..."
     all_restaurants = yelp_data_preprocessing.parse_restaurants()# cPickle.load(open('processed_restaurant_data.p', 'rb'))
-    print "successfully loaded restaurant data"
 
     review_count = 1 if data_size == 'Big' else 500
     reserved_restaurants = []
@@ -342,11 +340,8 @@ def main(argv):
             reserved_restaurants.append(restaurant)
     reserved_restaurants = set(reserved_restaurants)
 
-    print "load reviews data..."
     all_reviews = yelp_data_preprocessing.parse_reviews()#cPickle.load(open('processed_review_data.p', 'rb'))
-    print "successfully loaded reviews data"
 
-    return
     #random evaluation
     if training_method == 'random':
         print "calculating random rmse..."

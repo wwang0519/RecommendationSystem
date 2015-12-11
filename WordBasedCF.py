@@ -1,5 +1,6 @@
 import utils
 import sklearn
+import random
 
 def CF_evaluating(test_user_data,user_rating_table,restaurant_features):
     """
@@ -53,11 +54,19 @@ def CF_prediction(item_rating_table,restaurant_features,restaurant,user,cache):
     for item in item_rating_table:
         if (item,restaurant) in cache:
             similarity = cache[(item,restaurant)]
+            print "Item in cache, fetching in cache. "
         elif (restaurant,item) in cache:
             similarity = cache[(restaurant,item)]
+            print "Item in cache, fetching in cache. "
         else:
-            similarity = utils.cal_pearson_corr(restaurant_features[item],restaurant_features[restaurant])
-            cache[(item,restaurant)] = similarity
+            #for debugging
+            if item not in restaurant_features or restaurant not in restaurant_features:
+                print "required item/restaurant ", item, " is not in restaurant features, assigning a random value"
+                # assign a random value to it
+                similarity = random.random()
+            else:
+                similarity = utils.cal_pearson_corr(restaurant_features[item],restaurant_features[restaurant])
+                cache[(item,restaurant)] = similarity
         numerator += similarity * item_rating_table[item]
         denominator += similarity
         

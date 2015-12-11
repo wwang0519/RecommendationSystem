@@ -10,7 +10,7 @@ import extract_feature
 all_restaurants = yelp_data_preprocessing.parse_restaurants()
 reserved_restaurants = []
 for (restaurant,), [reviews] in all_restaurants.items():
-    if reviews['review_count'] >= 1:
+    if reviews['review_count'] >= 500:
         reserved_restaurants.append(restaurant)
 
 reserved_restaurants = set(reserved_restaurants)
@@ -333,7 +333,7 @@ def main(argv):
     # set necessary parameters
     review_minimum_num = 50
     test_percentage = 0.1 # percentage of test data in all data set
-    training_percentage = 0.25 # percentage of actual training set in all training data 
+    training_percentage = 1 # percentage of actual training set in all training data 
 
     # initialize data set
     user_indexed_reviews = dict()  # user -> review
@@ -379,9 +379,10 @@ def main(argv):
 
     # Word Based CF evaluation
     print "calculating Word Based CF evaluations..."
-##     //similarities = cal_CF_similarity(restaurant_user_table)
     # calculate restaurant features
     restaurant_features = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+    print "restaurant indexed reviews length is ",len(restaurant_indexed_reviews)
+    print "restaurant features length is ",len(restaurant_features)
     print "Word Based CF evaluating"
     CF_evaluations = WordBasedCF.CF_evaluating(test_user_data, user_rating_table, restaurant_features)
     print "calculating rmse"
@@ -400,7 +401,7 @@ def main(argv):
     # Content-based CF
     # restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
 
-    # Content-boosted CF
+    # Content-Boosted CF
     # classfiers = extract_feature.construct_classifier_for_user(user_indexed_reviews)
     # print "extract tfidf feature for resaurant..."
     # restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)

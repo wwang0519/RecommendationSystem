@@ -10,7 +10,7 @@ import extract_feature
 all_restaurants = yelp_data_preprocessing.parse_restaurants()
 reserved_restaurants = []
 for (restaurant,), [reviews] in all_restaurants.items():
-    if reviews['review_count'] >= 200:
+    if reviews['review_count'] >= 500:
         reserved_restaurants.append(restaurant)
 
 reserved_restaurants = set(reserved_restaurants)
@@ -378,15 +378,15 @@ def main(argv):
 #    print "final total SVD rmse for the test data is:", SVD_rmse
 
     # Word Based CF evaluation
-    print "calculating Word Based CF evaluations..."
+    #print "calculating Word Based CF evaluations..."
 ##     //similarities = cal_CF_similarity(restaurant_user_table)
     # calculate restaurant features
-    restaurant_features = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
-    print "Word Based CF evaluating"
-    CF_evaluations = WordBasedCF.CF_evaluating(test_user_data, user_rating_table, restaurant_features)
-    print "calculating rmse"
-    CF_rmse = cal_rmse(CF_evaluations)
-    print "final total CF rmse for the test data is:", CF_rmse
+    #restaurant_features = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+    #print "Word Based CF evaluating"
+    #CF_evaluations = WordBasedCF.CF_evaluating(test_user_data, user_rating_table, restaurant_features)
+    #print "calculating rmse"
+    #CF_rmse = cal_rmse(CF_evaluations)
+    #print "final total CF rmse for the test data is:", CF_rmse
 
 #    SVD_evaluations = svd_evaluating(test_user_data, user_rating_table, len(user_indexed_reviews))
 #    SVD_rmse = cal_rmse(SVD_evaluations)

@@ -312,7 +312,6 @@ def main(argv):
     # restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
 
     # Content-boosted CF
-    print "construct classifier for user..."
     classfiers = extract_feature.construct_classifier_for_user(user_indexed_reviews)
     print "extract tfidf feature for resaurant..."
     restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)

@@ -52,34 +52,50 @@ def extracttfidf_user(user_indexed_reviews):
 		i = i + 1
 	return user_feature
 
-def extracttfidf_user_restaurant(restaurant_reviews, all_reviews):
+def extracttfidf_user(user_indexed_reviews, all_reviews):
 	"""
-	extract tf-idf feature for each user
-    restaurant_reviews {business_id : [review]} 
-	return restaurant_features -- sparse array(word vector)
+	extract tf-idf feature for every user
+    user_indexed_reviews {user_id : {business_id : [review]}}
+	return word_count -- sparse array(word vector), ratings -- np array of label
 	"""
 	user_all_reviews = []
-	user_all_reviews.append(all_reviews)
+	# count vector num in user_count
+	user_count = dict()
+	X_total = dict()
+	y_total = dict()
 	ratings = []
-	for restaurant in restaurant_reviews:
-		# extract feature
-		reviews_content = ''
-		reviews = restaurant_reviews[restaurant]
-		for review in reviews:
-			reviews_content += review['text'][0:len(review['text'])-1]
-		if reviews_content == '':
-			continue
-		user_all_reviews.append(reviews_content)
-		# compute label
-		rating = round(utils.cal_average_rating(reviews)*2)
-		ratings.append(rating)
-	# count words
-	try:
-		vectorizer = TfidfVectorizer(min_df=1)
-		word_count = vectorizer.fit_transform(user_all_reviews)
-		return word_count[1:len(word_count),:], np.array(ratings)
-	except:
-		return None, None
+	for user in user_indexed_reviews:
+		user_count[user] = 0
+		restaurant_reviews = user_indexed_reviews[user]
+		for restaurant in restaurant_reviews:
+			# extract feature
+			reviews_content = ''
+			reviews = restaurant_reviews[restaurant]
+			for review in reviews:
+				reviews_content += review['text'][0:len(review['text'])-1]
+			if reviews_content == '':
+				continue
+			user_all_reviews.append(reviews_content)
+			# compute label
+			rating = round(utils.cal_average_rating(reviews)*2)
+			ratings.append(rating)
+			# count words
+			user_count[user] += 1
+	user_all_reviews.append(all_reviews)
+	vectorizer = TfidfVectorizer(min_df=1)
+	word_count = vectorizer.fit_transform(user_all_reviews)
+
+	sum_count = 0
+	for user in user_indexed_reviews:
+		if user_count[user] == 0:
+			X_total[user] = None
+			y_total[user] = None
+		else:
+			X_total[user] = word_count[sum_count:sum_count+user_count[user]+1, :]
+			y_total[user] = np.array(ratings[sum_count:sum_count+user_count[user]+1])
+		sum_count += user_count[user]
+
+	return X_total,y_total
 
 
 def construct_classifier_for_user(user_indexed_reviews):
@@ -96,10 +112,16 @@ def construct_classifier_for_user(user_indexed_reviews):
 			reviews = user_indexed_reviews[user][restaurant]
 			for review in reviews:
 				all_reviews += review['text'][0:len(review['text'])-1]
+
+	print 'extract feature...'
 	# construct classifier
+	X_total, y_total = extracttfidf_user(user_indexed_reviews, all_reviews)
+
+	print 'construct classifier...'
 	for user in user_indexed_reviews:
 		classifier = MultinomialNB(alpha=.01)
-		X_train, y_train = extracttfidf_user_restaurant(user_indexed_reviews[user], all_reviews)
+		X_train = X_total[user]
+		y_train = y_total[user]
 		if X_train == None:
 			user_classifier[user] = None
 		else:

@@ -3,12 +3,12 @@ import sys
 import random
 import math
 import yelp_data_preprocessing
-# import cPickle
-# import svd
-# import extract_feature
-# import svd
-# import WordBasedCF
-# import extract_feature
+import cPickle
+import svd
+import extract_feature
+import svd
+import WordBasedCF
+import extract_feature
 
 def build_user_and_restaurant_indexed_reviews(all_reviews, user_indexed_reviews, restaurant_indexed_reviews, reserved_restaurants):
     """
@@ -319,7 +319,7 @@ def main(argv):
     review_minimum_num = 50
     test_percentage = 0.1 # percentage of test data in all data set
     training_percentage = 0.25 # percentage of actual training set in all training data 
-    data_size = 'Big'
+    data_size = 'Small'
     training_method = 'CF' # random, CF, SVD, CBCF, WBCF
     pick_test_data = False
     savefile = False
@@ -336,7 +336,7 @@ def main(argv):
     review_count = 1 if data_size == 'Big' else 500
     reserved_restaurants = []
     for (restaurant,), [reviews] in all_restaurants.items():
-        if reviews['review_count'] >= 1:
+        if reviews['review_count'] >= review_count:
             reserved_restaurants.append(restaurant)
     reserved_restaurants = set(reserved_restaurants)
 

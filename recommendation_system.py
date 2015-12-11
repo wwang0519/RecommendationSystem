@@ -354,13 +354,13 @@ def main(argv):
     user_rating_table = build_user_rating_table(user_indexed_reviews)
     
     # CF evaluation
-    print "calculating CF evaluations..."
-    CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
-    CF_rmse = cal_rmse(CF_evaluations)
-    print "final total CF rmse for the test data is:", CF_rmse
-    print "global total count is", global_total_count
-    print "global count is", global_count
-    print "global count2 is", global_count2
+    # print "calculating CF evaluations..."
+    # CF_evaluations = CF_evaluating(test_user_data, user_rating_table, restaurant_user_table)
+    # CF_rmse = cal_rmse(CF_evaluations)
+    # print "final total CF rmse for the test data is:", CF_rmse
+    # print "global total count is", global_total_count
+    # print "global count is", global_count
+    # print "global count2 is", global_count2
 
 
 #     #random evaluation
@@ -401,11 +401,12 @@ def main(argv):
     # restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
 
     # Content-boosted CF
-    classfiers = extract_feature.construct_classifier_for_user(user_indexed_reviews)
-    print "extract tfidf feature for resaurant..."
-    restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
-    print "updat user rating table..."
-    user_rating_table = extract_feature.update_rating(restaurant_feature, classfiers, user_rating_table, restaurant_indexed_reviews)
+    # classfiers = extract_feature.construct_classifier_for_user(user_indexed_reviews)
+    # print "extract tfidf feature for resaurant..."
+    # restaurant_feature = extract_feature.extracttfidf_restaurant(restaurant_indexed_reviews)
+    # print "updat user rating table..."
+    # user_rating_table = extract_feature.update_rating(restaurant_feature, classfiers, user_rating_table, restaurant_indexed_reviews)
+    
     #restaurant_user_table = extract_feature.update_difference()
 
 if __name__ == '__main__':
